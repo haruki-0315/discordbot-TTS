@@ -1,0 +1,2 @@
+# discordbot-TTS
+discord内のボイスチャンネルで使用可能なメッセージ読み上げbot
