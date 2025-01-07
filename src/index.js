@@ -181,7 +181,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     if (!voiceChannel) return;
 
     if (voiceChannel.members.size === 1) {
-        connections.delete(oldState.guild.id);
+        connection.delete(oldState.guild.id);
         connection.destroy();
         console.log('全員が退出したため、ボイスチャンネルから抜けました。');
     }
