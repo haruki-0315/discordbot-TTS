@@ -24,9 +24,9 @@ node src/index.js
 
 ## 環境変数について
 - TOKEN
-[Discord Developer Portal](https://discord.com/developers/applications)から取得したトークンを記入してください。
+  [Discord Developer Portal](https://discord.com/developers/applications)から取得したトークンを記入してください。
 - API_KEY
-- [WEB版VOICEVOX API（高速）](https://voicevox.su-shiki.com/su-shikiapis/)から、[apiKeyの取得](https://su-shiki.com/api/)を押してapiKeyを発行し、そのkeyを記入して下さい。
+  [WEB版VOICEVOX API（高速）](https://voicevox.su-shiki.com/su-shikiapis/)から、[apiKeyの取得](https://su-shiki.com/api/)を押してapiKeyを発行し、そのkeyを記入して下さい。
 
 ## 必要な環境
 以下のシステムがインストールされている必要があります。
