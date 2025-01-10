@@ -44,6 +44,12 @@ const slashcommand = [
                 .addChannelTypes(2)
                 .setRequired(false),
         )
+        .addChannelOption(option =>
+            option.setName('読み上げ対象チャンネル')
+            .setDescription('メッセージの読み上げ対象チャンネルを選択します。指定がない場合、botが参加中のボイスチャンネルのチャットになります。')
+            .addChannelTypes(0)
+            .setRequired(false),
+        )
         .addStringOption(option =>
             option.setName('音声取得方法')
                 .setDescription('音声の取得方法を選択します。通常はmp3ダウンロードです。')
@@ -54,7 +60,7 @@ const slashcommand = [
                 .addChoices({
                     name: 'mp3ダウンロード',
                     value: 'mp3'
-                })
+                }),
         ),
 ]
 
@@ -83,6 +89,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.commandName === 'join') {
         await interaction.deferReply();
         const joinchannel = interaction.options.getChannel('参加するチャンネル');
+        const ttschannel = interaction.options.getChannel('読み上げ対象チャンネル');
         const method = interaction.options.getString('音声取得方法');
 
         const voicechannel = joinchannel || interaction.member.voice.channel;
@@ -100,7 +107,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // サーバーIDをキーとして情報を保存
         channelMap.set(interaction.guild.id, {
-            channelId: voicechannel.id,
+            channelId: ttschannel.id || voicechannel.id,
             method: method,
         });
 
