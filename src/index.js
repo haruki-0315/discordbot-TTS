@@ -46,9 +46,9 @@ const slashcommand = [
         )
         .addChannelOption(option =>
             option.setName('読み上げ対象チャンネル')
-            .setDescription('メッセージの読み上げ対象チャンネルを選択します。指定がない場合、botが参加中のボイスチャンネルのチャットになります。')
-            .addChannelTypes(0)
-            .setRequired(false),
+                .setDescription('メッセージの読み上げ対象チャンネルを選択します。指定がない場合、botが参加中のボイスチャンネルのチャットになります。')
+                .addChannelTypes(0)
+                .setRequired(false),
         )
         .addStringOption(option =>
             option.setName('音声取得方法')
@@ -74,7 +74,11 @@ const generateMp3Url = async (text, type = 'mp3StreamingUrl') => {
         throw new Error(`Failed to generate voice: ${response.statusText}`);
     }
 
-    return response.data[type];
+    if (type === 'mp3DownloadUrl') {
+        return [response.data['audioStatusUrl'], response.data[type]];
+    } else {
+        return [response.data[type]];
+    }
 };
 
 // 保存されている情報を取得する例
@@ -139,7 +143,7 @@ client.on('messageCreate', async (message) => {
         const player = createAudioPlayer();
 
         if (method === 'stream') {
-            const url = await generateMp3Url(content, 'mp3StreamingUrl');
+            const url = await generateMp3Url(content, 'mp3StreamingUrl')[0];
             const response = await axios.get(url, { responseType: 'stream' });
             const writer = fs.createWriteStream(tempFilePath);
             response.data.pipe(writer);
@@ -151,17 +155,36 @@ client.on('messageCreate', async (message) => {
             const resource = createAudioResource(tempFilePath);
             player.play(resource);
         } else {
-            const url = await generateMp3Url(content, 'mp3DownloadUrl');
-            const response = await axios.get(url, { responseType: 'stream' });
-            const writer = fs.createWriteStream(tempFilePath);
-            response.data.pipe(writer);
-            await new Promise((resolve, reject) => {
-                writer.on('finish', resolve);
-                writer.on('error', reject);
-            });
+            const statusUrl = (await generateMp3Url(content, 'mp3DownloadUrl'))[0];
+            const url = (await generateMp3Url(content, 'mp3DownloadUrl'))[1];
 
-            const resource = createAudioResource(tempFilePath);
-            player.play(resource);
+            while (true) {
+                try {
+                    const { data } = await axios.get(statusUrl);
+
+                    if (data.isAudioReady) {
+                        const response = await axios.get(url, { responseType: 'stream' });
+                        await new Promise((resolve, reject) => {
+                            const writer = fs.createWriteStream(tempFilePath);
+                            response.data.pipe(writer);
+                            writer.on('finish', resolve);
+                            writer.on('error', reject);
+                        });
+
+                        const resource = createAudioResource(tempFilePath);
+                        player.play(resource);
+                        break; // 成功したのでループを終了
+                    }
+
+                    console.log("Status is false or undefined. Retrying...");
+                } catch (error) {
+                    console.error("Request failed:", error.message);
+                }
+
+                // 100ms 待機
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
         }
 
         connection.subscribe(player);
@@ -193,7 +216,6 @@ client.on('voiceStateUpdate', (oldState, newState) => {
         console.log('全員が退出したため、ボイスチャンネルから抜けました。');
     }
 });
-
 
 
 /*
