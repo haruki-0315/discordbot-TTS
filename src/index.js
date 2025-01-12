@@ -102,6 +102,13 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        if (joinchannel) {
+            if (joinchannel.members.size === 0) {
+                await interaction.editReply('誰もいないボイスチャンネルに参加することはできません。');
+                return;
+            }
+        }
+
         // 新たに接続
         connection = joinVoiceChannel({
             channelId: voicechannel.id,
@@ -109,9 +116,12 @@ client.on('interactionCreate', async (interaction) => {
             adapterCreator: interaction.guild.voiceAdapterCreator,
         });
 
+        // 読み上げ対象チャンネルが指定されている場合のみ処理
+        const ttsChannelId = ttschannel ? ttschannel.id : voicechannel.id;
+
         // サーバーIDをキーとして情報を保存
         channelMap.set(interaction.guild.id, {
-            channelId: ttschannel.id || voicechannel.id,
+            channelId: ttsChannelId,
             method: method,
         });
 
@@ -143,7 +153,7 @@ client.on('messageCreate', async (message) => {
         const player = createAudioPlayer();
 
         if (method === 'stream') {
-            const url = await generateMp3Url(content, 'mp3StreamingUrl')[0];
+            const url = (await generateMp3Url(content, 'mp3StreamingUrl'))[0];
             const response = await axios.get(url, { responseType: 'stream' });
             const writer = fs.createWriteStream(tempFilePath);
             response.data.pipe(writer);
@@ -211,9 +221,14 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     if (!voiceChannel) return;
 
     if (voiceChannel.members.size === 1) {
-        channelMap.delete(oldState.guild.id);
-        connection.destroy();
-        console.log('全員が退出したため、ボイスチャンネルから抜けました。');
+        // connectionが既に破棄されていないか確認
+        if (connection.state.status !== "destroyed") {
+            channelMap.delete(oldState.guild.id);
+            connection.destroy();
+            console.log('全員が退出したため、ボイスチャンネルから抜けました。');
+        } else {
+            console.log('接続は既に破棄されています。');
+        }
     }
 });
 
